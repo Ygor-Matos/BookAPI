@@ -7,7 +7,7 @@ def test_read_root_deve_retornar_ok(client):
     assert response.json() == { 'message':'ola mundo'} #assert
 
 def test_create_user(client):
-
+    
     response = client.post( # user Schema
         '/users/',
         json={
@@ -89,3 +89,30 @@ def test_delete_user_error(client):
 
     assert response_max.json() == {'detail':'user not found'}
     assert response_min.json() == {'detail':'user not found'}
+
+def test_get_user(client):
+    
+    response = client.post( # user Schema
+        '/users/',
+        json={
+        'username':"teste",
+        'email':"teste@teste.com",
+        'password':'senhateste'
+        }
+    )
+
+    response = client.get('users/1')
+
+    assert response.json() == {
+        'username':"teste",
+        'email':"teste@teste.com",
+        'id':1
+        }
+
+def test_get_user_error(client):
+    response_min= client.get('users/0')
+    response_max= client.get('users/1000')
+    
+    
+    assert response_min.json() == {'detail':'user not found'}
+    assert response_max.json() == {'detail':'user not found'}
