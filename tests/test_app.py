@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from livraria.schemas import UserPublic
 
 def test_read_root_deve_retornar_ok(client):
     response = client.get('/') #ACt (ação)
@@ -26,19 +27,54 @@ def test_create_user(client):
         'email': 'teste@teste.com'
     }
 
+def test_create_user_username_already_registered(client, user):
+    
+    response = client.post( # user Schema
+        '/users/',
+        json={
+        'username':"teste",
+        'email':"teste@testando.com",
+        'password':'senhateste'
+        }
+    )
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json()=={
+        "detail": 'Username already exists'
+    }
+
+
+def test_create_user_email_already_registered(client, user):
+    
+    response = client.post( # user Schema
+        '/users/',
+        json={
+        'username':"testando",
+        'email':"teste@teste.com",
+        'password':'senhateste'
+        }
+    )
+
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json()=={
+        "detail": 'Email already exists'
+    }
+
+
 def test_read_users(client):
     response = client.get('/users/')
     assert response.status_code == HTTPStatus.OK
-    assert response.json() =={ 'users': [
-        {
-            'id': 1,
-            'username': 'teste',
-            'email': 'teste@teste.com'            
-        }
-    ]
-    }
+    assert response.json() =={ 'users': []}
 
-def test_update_user(client):
+def test_read_users_with_user(client,user):
+    user_schema= UserPublic.model_validate(user).model_dump()
+    response = client.get('/users/')
+    assert response.status_code == HTTPStatus.OK
+    assert response.json() =={ 'users': [user_schema]}
+
+
+
+def test_update_user(client,user):
     response = client.put(
         '/users/1',
         json={
@@ -55,8 +91,24 @@ def test_update_user(client):
     }
 
 
-def test_update_user_error(client):
-    response_max = client.put(
+
+def test_delete_user(client,user):
+    response = client.delete('/users/1')
+
+    assert response.json() == { 'message': 'User deleted'}
+
+def test_delete_user_error(client):
+
+    response = client.delete('users/0')
+    
+    
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail':'User not found'}
+
+
+
+def test_update_user_error(client,user):
+    response = client.put(
         '/users/1000',
         json={
         'password': "mudei",
@@ -64,55 +116,12 @@ def test_update_user_error(client):
         'email': 'teste@teste.com'
         }
     )
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() =={'detail':'User not found'} 
 
-    response_min = client.put(
-        '/users/0',
-        json={
-        'password': "mudei",
-        'username': 'dunossingo',
-        'email': 'teste@teste.com'
-        }
-    )
-
-    assert response_max.json() =={'detail':'user not found'} 
-    assert response_min.json() =={'detail':'user not found'} 
-
-def test_delete_user(client):
-    response = client.delete('/users/1')
-
-    assert response.json() == { 'message': 'user deleted'}
-
-def test_delete_user_error(client):
-    
-    response_max = client.delete('users/1000')
-    response_min = client.delete('users/0')
-
-    assert response_max.json() == {'detail':'user not found'}
-    assert response_min.json() == {'detail':'user not found'}
-
-def test_get_user(client):
-    
-    response = client.post( # user Schema
-        '/users/',
-        json={
-        'username':"teste",
-        'email':"teste@teste.com",
-        'password':'senhateste'
-        }
-    )
-
-    response = client.get('users/1')
-
-    assert response.json() == {
-        'username':"teste",
-        'email':"teste@teste.com",
-        'id':1
-        }
 
 def test_get_user_error(client):
-    response_min= client.get('users/0')
-    response_max= client.get('users/1000')
+    response= client.get('users/1')
     
-    
-    assert response_min.json() == {'detail':'user not found'}
-    assert response_max.json() == {'detail':'user not found'}
+    assert response.status_code == HTTPStatus.NOT_FOUND
+    assert response.json() == {'detail':'User not found'}
