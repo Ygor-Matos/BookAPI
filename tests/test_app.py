@@ -74,13 +74,17 @@ def test_read_users_with_user(client,user):
 
 
 
-def test_update_user(client,user):
+def test_update_user(client,user, token):
+    #FAZER ISSO COM OS OUTROS 
+    #TESTES QUE ESTÃO DANDO ERRO, colocar dependencia de token e preencher o response
+    #com o header
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
+        headers={'authorization': f'Bearer {token}'},
         json={
-        'password': "mudei",
-        'username': 'dunossingo',
-        'email': 'teste@teste.com'
+            'password': "mudei",
+            'username': 'dunossingo',
+            'email': 'teste@teste.com'
         }
     )
 
@@ -92,32 +96,37 @@ def test_update_user(client,user):
 
 
 
-def test_delete_user(client,user):
-    response = client.delete('/users/1')
+def test_delete_user(client,user,token):
+    
+    response = client.delete('/users/1', headers={'authorization': f'Bearer {token}'},)
 
     assert response.json() == { 'message': 'User deleted'}
 
-def test_delete_user_error(client):
 
-    response = client.delete('users/0')
+
+
+def test_delete_user_without_permission(client,user,token):
+
+    response = client.delete('users/3',headers={'authorization': f'Bearer {token}'})
     
     
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() == {'detail':'User not found'}
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json() == {'detail':'Not enough permissions'}
 
 
 
-def test_update_user_error(client,user):
+def test_update_user_error(client,user, token):
     response = client.put(
         '/users/1000',
+        headers={'authorization': f'Bearer {token}'},
         json={
         'password': "mudei",
         'username': 'dunossingo',
         'email': 'teste@teste.com'
         }
     )
-    assert response.status_code == HTTPStatus.NOT_FOUND
-    assert response.json() =={'detail':'User not found'} 
+    assert response.status_code == HTTPStatus.BAD_REQUEST
+    assert response.json() =={'detail':'Not enough permission'} 
 
 
 def test_get_user_error(client):
@@ -125,3 +134,17 @@ def test_get_user_error(client):
     
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail':'User not found'}
+
+
+def test_get_token(client, user):
+    response = client.post(
+        '/token', data={'username':user.email, 'password':user.clean_password},
+    )
+    token = response.json()
+
+    assert response.status_code == HTTPStatus.OK
+    assert token['token_type'] == 'Bearer'
+    assert 'access_token' in token
+
+
+
